@@ -1,8 +1,11 @@
+HARIS.zip
+
 .virtual_documents/
 .local/
 local/
 private/
 .private/
+data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
