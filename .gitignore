@@ -6,6 +6,9 @@ local/
 private/
 .private/
 data/
+datasets/
+runs/
+*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
