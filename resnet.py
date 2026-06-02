@@ -18,29 +18,33 @@ base_model = keras.applications.ResNet50(
 for layer in base_model.layers:
     layer.trainable = False
 
+print(base_model.summary())
 inputs = keras.Input(shape=(224, 224, 3))
-x = base_model(inputs, training=False)
+x = keras.applications.resnet50.preprocess_input(inputs)
+x = base_model(x, training=False)
 
 # Create output layer
 x = layers.BatchNormalization()(x)
 x = layers.Activation("relu")(x)
 x = layers.GlobalAveragePooling2D()(x)
-x = layers.Dropout(0.25)(x)
+x = layers.Dropout(0.4)(x)
 
-outputs = layers.Dense(1, activation=None)(x)
+outputs = layers.Dense(1, activation="sigmoid")(x)
 model = keras.Model(inputs=inputs, outputs=outputs)
 
-# Allow training on 
+# Allow training on
 # convolutional layer (5)
 
 for layer in base_model.layers:
+    if "conv4" in layer.name:
+        layer.trainable = True
     if "conv5" in layer.name:
         layer.trainable = True
 
 # Compile
 model.compile(
     optimizer=keras.optimizers.Adam(0.0001),
-    loss=keras.losses.BinaryCrossentropy(from_logits=True),
+    loss=keras.losses.BinaryCrossentropy(from_logits=False),
     metrics=[
         keras.metrics.BinaryAccuracy(name="acc"),
         keras.metrics.Precision(name="precision"),
@@ -53,7 +57,7 @@ train_images = "data/HARIS_classification_train/"
 validation_images = "data/HARIS_classification_validation/"
 
 image_size = (224, 224)
-batch_size = 32
+batch_size = 64
 
 train_ds = keras.utils.image_dataset_from_directory(
     train_images,
@@ -71,6 +75,9 @@ val_ds = keras.utils.image_dataset_from_directory(
 data_augmentation_layers = [
     layers.RandomFlip("horizontal"),
     layers.RandomRotation(0.1),
+    layers.RandomZoom(0.2),
+    layers.RandomContrast(0.2),
+    layers.RandomTranslation(0.1, 0.1),
 ]
 
 def data_augmentation(images):
@@ -88,7 +95,6 @@ train_ds = train_ds.map(
 
 train_ds = train_ds.prefetch(tf_data.AUTOTUNE)
 val_ds = val_ds.prefetch(tf_data.AUTOTUNE)
-augmented_train_ds = train_ds.map(lambda x, y: (data_augmentation(x), y))
 
 # Log results to CSV file
 csv_logger = CSVLogger("results.csv", append=True)
@@ -100,7 +106,7 @@ callbacks = [
 
 epochs = 50
 model.fit(
-    augmented_train_ds,
+    train_ds,
     epochs=epochs,
     callbacks=callbacks,
     validation_data=val_ds,
